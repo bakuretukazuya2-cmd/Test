@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>注文フォーム</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif; margin: 16px; }
+    .card { max-width: 520px; margin: 0 auto; padding: 16px; border: 1px solid #ddd; border-radius: 12px; }
+    label { display:block; margin-top: 12px; font-weight: 600; }
+    input, select, textarea, button { width: 100%; padding: 10px; margin-top: 6px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; }
+    button { border: 0; cursor: pointer; font-weight: 700; }
+    .primary { background: #06c755; color: #fff; margin-top: 16px; }
+    .muted { color:#666; font-size: 12px; margin-top: 10px; }
+    .row { display:flex; gap:10px; }
+    .row > div { flex:1; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 style="margin:0 0 6px;">注文フォーム</h2>
+    <div class="muted" id="status">初期化中…</div>
+
+    <label>商品</label>
+    <select id="product">
+      <option value="唐揚げ弁当">唐揚げ弁当</option>
+      <option value="ハンバーグ弁当">ハンバーグ弁当</option>
+      <option value="日替わり弁当">日替わり弁当</option>
+    </select>
+
+    <div class="row">
+      <div>
+        <label>数量</label>
+        <input id="qty" type="number" min="1" value="1" />
+      </div>
+      <div>
+        <label>受取方法</label>
+        <select id="pickup">
+          <option value="店頭受取">店頭受取</option>
+          <option value="配達">配達</option>
+        </select>
+      </div>
+    </div>
+
+    <label>お名前</label>
+    <input id="name" type="text" placeholder="例：カズヤ" />
+
+    <label>電話番号（任意）</label>
+    <input id="tel" type="tel" placeholder="090..." />
+
+    <label>メモ（任意）</label>
+    <textarea id="memo" rows="3" placeholder="例：12:30頃に取りに行きます"></textarea>
+
+    <button class="primary" id="submit">LINEで注文を送信</button>
+    <div class="muted">※送信後、この画面を閉じます。</div>
+  </div>
+
+  <script>
+    // ★ここにあなたのLIFF IDを入れる
+    const LIFF_ID = "YOUR_LIFF_ID";
+
+    const $ = (id) => document.getElementById(id);
+
+    async function init() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        $("status").textContent = liff.isLoggedIn() ? "準備OK" : "未ログイン（ログインします）";
+
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+      } catch (e) {
+        $("status").textContent = "初期化エラー: " + (e?.message ?? e);
+      }
+    }
+
+    function buildMessage() {
+      const product = $("product").value;
+      const qty = $("qty").value;
+      const pickup = $("pickup").value;
+      const name = $("name").value.trim() || "（未入力）";
+      const tel = $("tel").value.trim() || "（未入力）";
+      const memo = $("memo").value.trim() || "（なし）";
+
+      const text =
+`【注文】
+商品：${product}
+数量：${qty}
+受取：${pickup}
+名前：${name}
+電話：${tel}
+メモ：${memo}`;
+
+      return text;
+    }
+
+    $("submit").addEventListener("click", async () => {
+      try {
+        const text = buildMessage();
+
+        // LINE内ブラウザで開いている必要あり
+        if (!liff.isInClient()) {
+          alert("LINEアプリ内で開いてください（LIFF）。");
+          return;
+        }
+
+        await liff.sendMessages([{ type: "text", text }]);
+        liff.closeWindow();
+      } catch (e) {
+        alert("送信に失敗: " + (e?.message ?? e));
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
